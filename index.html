@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SimLab 3D Science School</title>
+
+<!-- PWA / mobile app metadata -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#050a14">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SimLab">
+<meta name="description" content="Interactive 3D-style physics, biology, chemistry, and earth science simulations for school.">
+<link rel="icon" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background: #050a14;
+    color: #e8f4fd;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  :root {
+    --bio: #00e5a0;
+    --chem: #ff6b35;
+    --phys: #4d9fff;
+    --earth: #b87aff;
+    --bg: #050a14;
+    --card: #0a1628;
+    --border: rgba(255,255,255,0.08);
+    --text-muted: #6b8aaa;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    padding: 0 2rem;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: rgba(5,10,20,0.95);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, #00e5a0, #4d9fff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .logo-dot { -webkit-text-fill-color: #ff6b35; color: #ff6b35; }
+
+  .nav { display: flex; gap: 8px; }
+  .nav button {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .nav button:hover { border-color: rgba(255,255,255,0.2); color: #e8f4fd; }
+  .nav button.active { border-color: #4d9fff; color: #4d9fff; background: rgba(77,159,255,0.1); }
+
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .level-badge { font-size: 12px; color: var(--text-muted); }
+
+  .install-btn {
+    background: linear-gradient(135deg, #4d9fff, #00e5a0);
+    color: #04101f;
+    border: none;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 13px;
+    border-radius: 20px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .install-btn:active { transform: scale(0.96); }
+
+  /* ── SMALL PHONE TWEAKS ── */
+  @media (max-width: 480px) {
+    .header { padding: 0 0.9rem; height: 56px; }
+    .logo { font-size: 16px; }
+    .nav { display: none; }
+    .level-badge { display: none; }
+    .hero { padding: 2rem 1rem 1.5rem; }
+    .hero-stats { gap: 1.4rem; flex-wrap: wrap; }
+    .subject-tabs { padding: 1rem 1rem 0; }
+    .main-grid { padding: 1rem; gap: 1rem; }
+    .section-label, .modules-grid { padding-left: 1rem; padding-right: 1rem; }
+    .sim-controls .sim-btn { padding: 6px 10px; font-size: 11px; }
+    .canvas-wrap { height: 300px; }
+  }
+  .xp-badge {
+    background: linear-gradient(135deg, #ff6b35, #ffaa44);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 20px;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    padding: 3.5rem 2rem 2.5rem;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  #heroCanvas {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    width: 100%;
+    height: 100%;
+  }
+
+  .hero h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(24px, 4vw, 48px);
+    font-weight: 900;
+    line-height: 1.1;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 1rem;
+  }
+
+  .hero h1 .line1 { color: #e8f4fd; display: block; margin-bottom: 4px; }
+  .hero h1 .line2 {
+    display: block;
+    background: linear-gradient(90deg, #00e5a0, #4d9fff, #b87aff, #ff6b35);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-size: 300%;
+    animation: shimmer 4s linear infinite;
+  }
+
+  @keyframes shimmer { 0% { background-position: 0% } 100% { background-position: 300% } }
+
+  .hero-sub {
+    position: relative;
+    z-index: 1;
+    color: var(--text-muted);
+    font-size: 15px;
+    max-width: 520px;
+    margin: 0 auto 2rem;
+    line-height: 1.7;
+  }
+
+  .hero-stats {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .hero-stats .stat strong { color: #e8f4fd; font-size: 22px; display: block; font-weight: 600; margin-bottom: 2px; }
+
+  /* ── SUBJECT TABS ── */
+  .subject-tabs {
+    display: flex;
+    gap: 10px;
+    padding: 1.5rem 2rem 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .subject-tabs::-webkit-scrollbar { display: none; }
+
+  .stab {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 22px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.25s;
+    color: var(--text-muted);
+  }
+
+  .stab .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .stab.active-bio  { border-color: var(--bio);   color: var(--bio);   background: rgba(0,229,160,0.08); }
+  .stab.active-chem { border-color: var(--chem);  color: var(--chem);  background: rgba(255,107,53,0.08); }
+  .stab.active-phys { border-color: var(--phys);  color: var(--phys);  background: rgba(77,159,255,0.08); }
+  .stab.active-earth{ border-color: var(--earth); color: var(--earth); background: rgba(184,122,255,0.08); }
+  .stab:not([class*="active"]):hover { border-color: rgba(255,255,255,0.15); color: #e8f4fd; }
+
+  /* ── MAIN GRID ── */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 1.5rem;
+    padding: 1.5rem 2rem;
+  }
+  @media (max-width: 1000px) { .main-grid { grid-template-columns: 1fr; } }
+
+  /* ── SIM VIEWER ── */
+  .sim-viewer {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .sim-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .sim-title { display: flex; align-items: center; gap: 10px; }
+
+  .sim-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 4px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .sim-name { font-size: 14px; font-weight: 600; color: #e8f4fd; }
+
+  .sim-controls { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .sim-btn {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .sim-btn:hover { background: rgba(255,255,255,0.1); color: #e8f4fd; }
+  .sim-btn.paused { border-color: #4d9fff; color: #4d9fff; background: rgba(77,159,255,0.1); }
+
+  .canvas-wrap {
+    position: relative;
+    height: 400px;
+    background: #020810;
+  }
+
+  #simCanvas { display: block; width: 100%; height: 100%; }
+
+  .sim-overlay {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    pointer-events: none;
+  }
+
+  .data-chip {
+    background: rgba(5,10,20,0.85);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    padding: 5px 11px;
+    font-size: 11px;
+    font-family: 'Orbitron', monospace;
+    color: #e8f4fd;
+    backdrop-filter: blur(8px);
+    white-space: nowrap;
+  }
+  .data-chip .chip-label { color: var(--text-muted); font-family: 'Space Grotesk', sans-serif; }
+
+  .sim-footer {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .sliders { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  .slider-row { display: flex; flex-direction: column; gap: 7px; }
+
+  .slider-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .slider-label strong { color: #e8f4fd; font-weight: 500; }
+
+  input[type=range] {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+  input[type=range].phys::-webkit-slider-thumb  { background: var(--phys); }
+  input[type=range].bio::-webkit-slider-thumb   { background: var(--bio); }
+  input[type=range].chem::-webkit-slider-thumb  { background: var(--chem); }
+  input[type=range].earth::-webkit-slider-thumb { background: var(--earth); }
+
+  /* ── INFO PANEL ── */
+  .panel-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+
+  .panel-header {
+    padding: 0.875rem 1.125rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .lesson-list { padding: 0.5rem; }
+
+  .lesson-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+  .lesson-item:hover { background: rgba(255,255,255,0.04); }
+  .lesson-item.active { background: rgba(77,159,255,0.08); border-color: rgba(77,159,255,0.2); }
+
+  .lesson-icon {
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .lesson-info { flex: 1; min-width: 0; }
+  .lesson-name { font-size: 12px; font-weight: 500; color: #e8f4fd; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lesson-meta { font-size: 10px; color: var(--text-muted); }
+
+  .lesson-status {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+  .ls-done { background: rgba(0,229,160,0.15); color: var(--bio); }
+  .ls-curr { background: rgba(77,159,255,0.15); color: var(--phys); border: 1px solid rgba(77,159,255,0.3); }
+  .ls-lock { background: rgba(255,255,255,0.05); color: var(--text-muted); }
+
+  /* ── ACHIEVEMENTS ── */
+  .achievement {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    transition: background 0.2s;
+    cursor: default;
+  }
+  .achievement:hover { background: rgba(255,255,255,0.03); }
+  .ach-icon {
+    width: 38px; height: 38px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .ach-name { font-size: 13px; font-weight: 500; color: #e8f4fd; }
+  .ach-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  /* ── SECTION HEADER ── */
+  .section-label {
+    padding: 0 2rem;
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .section-label h2 { font-size: 18px; font-weight: 600; color: #e8f4fd; }
+  .section-label a { font-size: 13px; color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
+  .section-label a:hover { color: #4d9fff; }
+
+  /* ── MODULE CARDS ── */
+  .modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 1.25rem 2rem 2rem;
+  }
+
+  .module-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+  .module-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .module-card.bio::before   { background: var(--bio); }
+  .module-card.chem::before  { background: var(--chem); }
+  .module-card.phys::before  { background: var(--phys); }
+  .module-card.earth::before { background: var(--earth); }
+
+  .module-card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.15); }
+  .module-card.bio:hover   { box-shadow: 0 8px 32px rgba(0,229,160,0.12);   border-color: rgba(0,229,160,0.3); }
+  .module-card.chem:hover  { box-shadow: 0 8px 32px rgba(255,107,53,0.12);  border-color: rgba(255,107,53,0.3); }
+  .module-card.phys:hover  { box-shadow: 0 8px 32px rgba(77,159,255,0.12);  border-color: rgba(77,159,255,0.3); }
+  .module-card.earth:hover { box-shadow: 0 8px 32px rgba(184,122,255,0.12); border-color: rgba(184,122,255,0.3); }
+
+  .mod-emoji   { font-size: 30px; margin-bottom: 10px; }
+  .mod-subject { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; }
+  .mod-name    { font-size: 14px; font-weight: 600; color: #e8f4fd; margin-bottom: 6px; line-height: 1.3; }
+  .mod-desc    { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px; }
+  .mod-footer  { display: flex; justify-content: space-between; align-items: center; }
+  .mod-lessons { font-size: 11px; color: var(--text-muted); }
+  .mod-launch  {
+    font-size: 11px; font-weight: 600;
+    padding: 5px 12px; border-radius: 6px;
+    border: none; cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+    transition: opacity 0.2s;
+  }
+  .mod-launch:hover { opacity: 0.8; }
+  .progress-bar-wrap { margin-top: 10px; }
+  .progress-bar { height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 2px; }
+
+  /* ── QUIZ MODAL ── */
+  .quiz-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(2,8,16,0.92);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+  }
+  .quiz-overlay.show { display: flex; }
+
+  .quiz-box {
+    background: #0d1a2e;
+    border: 1px solid rgba(77,159,255,0.3);
+    border-radius: 20px;
+    padding: 2rem;
+    max-width: 520px;
+    width: 90%;
+    animation: fadeUp 0.3s ease;
+  }
+  @keyframes fadeUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: none; } }
+
+  .quiz-subject { font-family: 'Orbitron'; font-size: 11px; letter-spacing: 2px; color: #4d9fff; margin-bottom: 1rem; }
+  .quiz-q { font-size: 16px; color: #e8f4fd; margin-bottom: 1.5rem; line-height: 1.6; }
+  .quiz-opts { display: grid; gap: 8px; }
+  .quiz-opt {
+    padding: 11px 16px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: #e8f4fd;
+    font-size: 14px;
+    cursor: pointer;
+    text-align: left;
+    font-family: 'Space Grotesk', sans-serif;
+    transition: all 0.2s;
+  }
+  .quiz-opt:hover:not(:disabled) { border-color: rgba(77,159,255,0.4); background: rgba(77,159,255,0.08); }
+  .quiz-opt.correct { border-color: var(--bio); background: rgba(0,229,160,0.1); color: var(--bio); }
+  .quiz-opt.wrong   { border-color: var(--chem); background: rgba(255,107,53,0.1); color: var(--chem); }
+  .quiz-result { margin-top: 1rem; font-size: 13px; color: var(--text-muted); min-height: 20px; }
+  .quiz-close {
+    margin-top: 1rem;
+    width: 100%;
+    padding: 11px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-family: 'Space Grotesk', sans-serif;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+  .quiz-close:hover { color: #e8f4fd; border-color: rgba(255,255,255,0.2); }
+
+  /* ── FOOTER ── */
+  .footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+    margin-top: 1rem;
+    line-height: 1.8;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header class="header">
+  <div class="logo">SIM<span class="logo-dot">·</span>LAB</div>
+  <nav class="nav">
+    <button class="active" onclick="setNav(this)">Dashboard</button>
+    <button onclick="setNav(this)">Labs</button>
+    <button onclick="setNav(this)">Progress</button>
+    <button onclick="setNav(this)">Settings</button>
+  </nav>
+  <div class="header-right">
+    <button class="install-btn" id="installBtn" onclick="installApp()" style="display:none">⬇ Install App</button>
+    <span class="level-badge" id="levelBadge">Level 7 Scholar</span>
+    <span class="xp-badge" id="xpBadge">⚡ 2,840 XP</span>
+  </div>
+</header>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <canvas id="heroCanvas"></canvas>
+  <h1>
+    <span class="line1">Explore Science Through</span>
+    <span class="line2">Live 3D Simulations</span>
+  </h1>
+  <p class="hero-sub">Manipulate real physics. Observe molecular reactions. Dissect ecosystems. Build your scientific intuition through immersive interactive labs.</p>
+  <div class="hero-stats">
+    <div class="stat"><strong>128</strong>Simulations</div>
+    <div class="stat"><strong>4</strong>Subjects</div>
+    <div class="stat"><strong>32</strong>Lab Projects</div>
+    <div class="stat"><strong>96%</strong>Completion Rate</div>
+  </div>
+</section>
+
+<!-- ── SUBJECT TABS ── -->
+<div class="subject-tabs">
+  <button class="stab active-phys" id="tab-phys"  onclick="switchSim('phys')">
+    <span class="dot" style="background:var(--phys)"></span> ⚛ Physics
+  </button>
+  <button class="stab" id="tab-bio"   onclick="switchSim('bio')">
+    <span class="dot" style="background:var(--bio)"></span> 🧬 Biology
+  </button>
+  <button class="stab" id="tab-chem"  onclick="switchSim('chem')">
+    <span class="dot" style="background:var(--chem)"></span> ⚗ Chemistry
+  </button>
+  <button class="stab" id="tab-earth" onclick="switchSim('earth')">
+    <span class="dot" style="background:var(--earth)"></span> 🌍 Earth Science
+  </button>
+</div>
+
+<!-- ── MAIN GRID ── -->
+<div class="main-grid">
+
+  <!-- SIM VIEWER -->
+  <div class="sim-viewer">
+    <div class="sim-header">
+      <div class="sim-title">
+        <span class="sim-badge" id="simBadge" style="background:rgba(77,159,255,0.15);color:#4d9fff">PHYSICS</span>
+        <span class="sim-name" id="simName">Orbital Mechanics Simulator</span>
+      </div>
+      <div class="sim-controls">
+        <button class="sim-btn" id="playBtn" onclick="togglePlay()">⏸ Pause</button>
+        <button class="sim-btn" onclick="resetSim()">↺ Reset</button>
+        <button class="sim-btn" onclick="openQuiz()">📝 Quiz</button>
+        <button class="sim-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+      </div>
+    </div>
+
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="simCanvas"></canvas>
+      <div class="sim-overlay">
+        <div class="data-chip"><span class="chip-label" id="lbl1">Velocity: </span><span id="v1">7.8 km/s</span></div>
+        <div class="data-chip"><span class="chip-label" id="lbl2">Altitude: </span><span id="v2">408 km</span></div>
+        <div class="data-chip"><span class="chip-label" id="lbl3">Period: </span><span id="v3">92.6 min</span></div>
+      </div>
+    </div>
+
+    <div class="sim-footer">
+      <div class="sliders" id="sliderArea"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="course-panel">
+
+    <div class="panel-section">
+      <div class="panel-header">Current Module</div>
+      <div class="lesson-list" id="lessonList"></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-header">Achievements</div>
+      <div style="padding:0.5rem">
+        <div class="achievement">
+          <div class="ach-icon" style="background:rgba(255,170,68,0.15)">🏆</div>
+          <div><div class="ach-name">First Contact</div><div class="ach-desc">Completed first simulation</div></div>
+        </div>
+        <div class="achievement">
+          <div class="ach-icon" style="background:rgba(0,229,160,0.15)">🧬</div>
+          <div><div class="ach-name">DNA Detective</div><div class="ach-desc">Completed DNA replication lab</div></div>
+        </div>
+        <div class="achievement">
+          <div class="ach-icon" style="background:rgba(77,159,255,0.15)">⚛</div>
+          <div><div class="ach-name">Quantum Leap</div><div class="ach-desc">Scored 100% on atomic structure quiz</div></div>
+        </div>
+        <div class="achievement">
+          <div class="ach-icon" style="background:rgba(184,122,255,0.15)">🌋</div>
+          <div><div class="ach-name">Tectonic Master</div><div class="ach-desc">Simulated 5 plate collision events</div></div>
+        </div>
+        <div class="achievement">
+          <div class="ach-icon" style="background:rgba(255,107,53,0.15)">⚗</div>
+          <div><div class="ach-name">Molecule Builder</div><div class="ach-desc">Built 10 molecules in the bond lab</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── MODULE CARDS ── -->
+<div class="section-label">
+  <h2>All Simulation Modules</h2>
+  <a href="#">View all →</a>
+</div>
+<div class="modules-grid" id="modulesGrid"></div>
+
+<!-- ── QUIZ MODAL ── -->
+<div class="quiz-overlay" id="quizModal">
+  <div class="quiz-box">
+    <div class="quiz-subject" id="quizSubject">PHYSICS QUIZ</div>
+    <p class="quiz-q" id="quizQ"></p>
+    <div class="quiz-opts" id="quizOpts"></div>
+    <div class="quiz-result" id="quizResult"></div>
+    <button class="quiz-close" onclick="closeQuiz()">✕ Close Quiz</button>
+  </div>
+</div>
+
+<!-- ── FOOTER ── -->
+<footer class="footer">
+  <strong style="color:#e8f4fd;font-family:'Orbitron',monospace;font-size:14px">SIMLAB</strong><br>
+  3D Science School · 128 Interactive Simulations · 4 Subjects · Built with WebGL Canvas Physics Engine<br>
+  <span style="margin-top:6px;display:block">Biology · Chemistry · Physics · Earth Science</span>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════════════════
+const MODULES = [
+  { id:'bio1',   cls:'bio',   subject:'Biology',      color:'#00e5a0', emoji:'🧬', name:'DNA Replication',         desc:'Watch DNA unzip and replicate in real-time 3D animation with polymerase enzymes.', lessons:8,  progress:100 },
+  { id:'bio2',   cls:'bio',   subject:'Biology',      color:'#00e5a0', emoji:'🦠', name:'Cell Division',            desc:'Observe mitosis and meiosis phase by phase with interactive chromosome tracking.', lessons:6,  progress:67  },
+  { id:'bio3',   cls:'bio',   subject:'Biology',      color:'#00e5a0', emoji:'🫀', name:'Circulatory System',       desc:'Simulate blood flow through the heart, arteries, and capillary networks.', lessons:7,  progress:0   },
+  { id:'bio4',   cls:'bio',   subject:'Biology',      color:'#00e5a0', emoji:'🌿', name:'Photosynthesis',           desc:'Track photons hitting chlorophyll and ATP synthesis inside chloroplasts.', lessons:5,  progress:0   },
+  { id:'chem1',  cls:'chem',  subject:'Chemistry',    color:'#ff6b35', emoji:'⚗', name:'Molecular Bonding',        desc:'Build and break covalent, ionic, and metallic bonds with haptic visualization.', lessons:9,  progress:44  },
+  { id:'chem2',  cls:'chem',  subject:'Chemistry',    color:'#ff6b35', emoji:'🔥', name:'Chemical Reactions',       desc:'Balance equations and watch exothermic reactions unfold at particle level.', lessons:10, progress:20  },
+  { id:'chem3',  cls:'chem',  subject:'Chemistry',    color:'#ff6b35', emoji:'⚡', name:'Electrochemistry',         desc:'Simulate electrolysis, galvanic cells, and electron flow through circuits.', lessons:7,  progress:0   },
+  { id:'chem4',  cls:'chem',  subject:'Chemistry',    color:'#ff6b35', emoji:'🧪', name:'Acid-Base Reactions',      desc:'Visualize proton transfer and pH changes with real-time particle collision.', lessons:6,  progress:0   },
+  { id:'phys1',  cls:'phys',  subject:'Physics',      color:'#4d9fff', emoji:'🪐', name:'Orbital Mechanics',        desc:"Simulate gravitational orbits, escape velocity, and Kepler's laws in 3D space.", lessons:8,  progress:60  },
+  { id:'phys2',  cls:'phys',  subject:'Physics',      color:'#4d9fff', emoji:'🌊', name:'Wave Physics',             desc:'Interference, diffraction, and standing waves with interactive frequency control.', lessons:7,  progress:85  },
+  { id:'phys3',  cls:'phys',  subject:'Physics',      color:'#4d9fff', emoji:'⚛', name:'Atomic Structure',         desc:'Explore electron orbitals, quantum states, and atomic emission spectra live.', lessons:9,  progress:33  },
+  { id:'phys4',  cls:'phys',  subject:'Physics',      color:'#4d9fff', emoji:'🔋', name:'Electromagnetism',         desc:'Visualize electric fields, magnetic field lines, and Lorentz force dynamics.', lessons:8,  progress:0   },
+  { id:'earth1', cls:'earth', subject:'Earth Science', color:'#b87aff', emoji:'🌋', name:'Plate Tectonics',         desc:'Watch continents drift, subduction zones form, and volcanoes erupt in 3D.', lessons:6,  progress:80  },
+  { id:'earth2', cls:'earth', subject:'Earth Science', color:'#b87aff', emoji:'🌪', name:'Atmospheric Systems',     desc:'Simulate pressure cells, jet streams, and storm formation from first principles.', lessons:7,  progress:0   },
+  { id:'earth3', cls:'earth', subject:'Earth Science', color:'#b87aff', emoji:'🌊', name:'Ocean Currents',          desc:'Model thermohaline circulation and its impact on global climate patterns.', lessons:5,  progress:0   },
+  { id:'earth4', cls:'earth', subject:'Earth Science', color:'#b87aff', emoji:'☀', name:'Solar System',            desc:'Scale model of planetary motion, tidal forces, and eclipse geometry.', lessons:8,  progress:50  },
+];
+
+const LESSONS = {
+  phys: [
+    { name:"Newton's Law of Gravitation",  meta:'3D Sim · 12 min',     state:'done' },
+    { name:"Kepler's First & Second Laws", meta:'3D Sim · 15 min',     state:'done' },
+    { name:'Orbital Velocity & Period',    meta:'Interactive Lab',      state:'curr' },
+    { name:'Escape Velocity',              meta:'3D Sim · 10 min',     state:'lock' },
+    { name:'Lagrange Points',             meta:'Advanced · 18 min',    state:'lock' },
+  ],
+  bio: [
+    { name:'DNA Double Helix Structure',  meta:'3D Sim · 10 min',      state:'done' },
+    { name:'Helicase Enzyme in Action',   meta:'Molecular Sim · 14 min', state:'done' },
+    { name:'Base Pair Replication',       meta:'Interactive Lab',       state:'curr' },
+    { name:'Proofreading & Repair',       meta:'3D Sim · 11 min',      state:'lock' },
+    { name:'Telomere Shortening',         meta:'Advanced · 16 min',    state:'lock' },
+  ],
+  chem: [
+    { name:'Electron Configuration',      meta:'3D Sim · 9 min',       state:'done' },
+    { name:'Lewis Dot Structures',        meta:'Interactive Lab · 12 min', state:'lock' },
+    { name:'VSEPR Molecular Geometry',    meta:'Interactive Lab',       state:'curr' },
+    { name:'Polarity & Electronegativity', meta:'3D Sim · 13 min',     state:'lock' },
+    { name:'Intermolecular Forces',       meta:'Advanced · 15 min',    state:'lock' },
+  ],
+  earth: [
+    { name:"Earth's Interior Layers",     meta:'3D Model · 8 min',     state:'done' },
+    { name:'Convection Currents',         meta:'Fluid Sim · 14 min',   state:'done' },
+    { name:'Tectonic Plate Boundaries',   meta:'Interactive Map',      state:'curr' },
+    { name:'Subduction & Mountain Building', meta:'3D Sim · 16 min',  state:'lock' },
+    { name:'Seismic Wave Propagation',    meta:'Wave Sim · 12 min',    state:'lock' },
+  ]
+};
+
+const QUIZZES = {
+  phys: {
+    subject: 'PHYSICS QUIZ',
+    q: "According to Kepler's Third Law, if a planet's orbital radius doubles, its period increases by a factor of approximately:",
+    opts: ["1.41 (√2)", "2.83 (2√2)", "4.0", "8.0"],
+    ans: 1,
+    explain: "Correct! T² ∝ r³, so T ∝ r^1.5. When r×2 → T×2^1.5 ≈ 2.83"
+  },
+  bio: {
+    subject: 'BIOLOGY QUIZ',
+    q: "During DNA replication, which enzyme is responsible for unwinding the double helix by breaking hydrogen bonds between base pairs?",
+    opts: ["DNA Polymerase III", "Helicase", "Ligase", "Primase"],
+    ans: 1,
+    explain: "Correct! Helicase breaks the hydrogen bonds between complementary base pairs to separate the strands."
+  },
+  chem: {
+    subject: 'CHEMISTRY QUIZ',
+    q: "A water molecule (H₂O) has a bent molecular geometry. What is the approximate bond angle between the two O–H bonds?",
+    opts: ["90°", "104.5°", "109.5°", "120°"],
+    ans: 1,
+    explain: "Correct! The lone pairs on oxygen compress the H-O-H angle from 109.5° (tetrahedral) to ~104.5°."
+  },
+  earth: {
+    subject: 'EARTH SCIENCE QUIZ',
+    q: "At a convergent boundary where oceanic crust meets continental crust, which plate subducts and why?",
+    opts: ["Continental — it's lighter", "Oceanic — it's denser", "Neither — they collide equally", "Continental — it moves faster"],
+    ans: 1,
+    explain: "Correct! Oceanic crust (~3.0 g/cm³) is denser than continental crust (~2.7 g/cm³), so it sinks beneath."
+  }
+};
+
+const SIM_CONFIG = {
+  phys:  { badge:'PHYSICS',     badgeBg:'rgba(77,159,255,0.15)',  badgeCol:'#4d9fff', name:'Orbital Mechanics Simulator',       lbls:['Velocity','Altitude','Period'] },
+  bio:   { badge:'BIOLOGY',     badgeBg:'rgba(0,229,160,0.15)',   badgeCol:'#00e5a0', name:'DNA Double Helix & Replication',    lbls:['Base Spacing','Helix Pitch','Turn Count'] },
+  chem:  { badge:'CHEMISTRY',   badgeBg:'rgba(255,107,53,0.15)',  badgeCol:'#ff6b35', name:'Molecular Geometry & Bonding',      lbls:['Bond Angle','Geometry','Polarity'] },
+  earth: { badge:'EARTH SCI',   badgeBg:'rgba(184,122,255,0.15)', badgeCol:'#b87aff', name:'Tectonic Plate Dynamics',           lbls:['Drift Rate','Depth','Boundary Type'] },
+};
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER MODULE CARDS
+// ═══════════════════════════════════════════════════════════
+(function buildModules() {
+  const grid = document.getElementById('modulesGrid');
+  MODULES.forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'module-card ' + m.cls;
+    div.innerHTML = `
+      <div class="mod-emoji">${m.emoji}</div>
+      <div class="mod-subject" style="color:${m.color}">${m.subject}</div>
+      <div class="mod-name">${m.name}</div>
+      <div class="mod-desc">${m.desc}</div>
+      <div class="mod-footer">
+        <span class="mod-lessons">${m.lessons} lessons</span>
+        <button class="mod-launch" style="background:${m.color}18;color:${m.color};border:1px solid ${m.color}40" onclick="switchSim('${m.cls}')">Launch →</button>
+      </div>
+      <div class="progress-bar-wrap"><div class="progress-bar"><div class="progress-fill" style="width:${m.progress}%;background:${m.color}"></div></div></div>
+    `;
+    grid.appendChild(div);
+  });
+})();
+
+// ═══════════════════════════════════════════════════════════
+//  LESSON LIST
+// ═══════════════════════════════════════════════════════════
+function populateLessons(sub) {
+  const list = document.getElementById('lessonList');
+  list.innerHTML = '';
+  const colors = { phys:'#4d9fff', bio:'#00e5a0', chem:'#ff6b35', earth:'#b87aff' };
+  const emojis = { phys:'🪐', bio:'🧬', chem:'⚗', earth:'🌋' };
+  LESSONS[sub].forEach(l => {
+    const el = document.createElement('div');
+    el.className = 'lesson-item' + (l.state==='curr' ? ' active' : '');
+    const icons = { done:'✓', curr:'▶', lock:'○' };
+    const cls   = { done:'ls-done', curr:'ls-curr', lock:'ls-lock' };
+    el.innerHTML = `
+      <div class="lesson-icon" style="background:${colors[sub]}18">${emojis[sub]}</div>
+      <div class="lesson-info">
+        <div class="lesson-name">${l.name}</div>
+        <div class="lesson-meta">${l.meta}</div>
+      </div>
+      <div class="lesson-status ${cls[l.state]}">${icons[l.state]}</div>
+    `;
+    list.appendChild(el);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CANVAS SETUP
+// ═══════════════════════════════════════════════════════════
+const canvas = document.getElementById('simCanvas');
+const ctx    = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const wrap = canvas.parentElement;
+  canvas.width  = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// ═══════════════════════════════════════════════════════════
+//  SIMULATION STATE
+// ═══════════════════════════════════════════════════════════
+let currentSim = 'phys';
+let playing    = true;
+let animId     = null;
+
+let orbit  = { angle:0, speed:0.012, r:100, mass:100 };
+let bioT   = 0;
+let chemT  = 0;
+let earthT = 0;
+
+// ── PHYSICS ──────────────────────────────────────────────
+function drawPhys() {
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H/2;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#020810'; ctx.fillRect(0,0,W,H);
+
+  // Stars
+  for (let i = 0; i < 100; i++) {
+    const x = (i * 137.508 + 23) % W;
+    const y = (i *  97.320 + 41) % H;
+    const a = 0.15 + 0.6 * (Math.sin(i * 0.3 + Date.now() * 0.0004) * 0.5 + 0.5);
+    ctx.beginPath(); ctx.arc(x, y, 0.7, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(180,210,255,${a.toFixed(2)})`; ctx.fill();
+  }
+
+  // Orbit path
+  const r = orbit.r * (W / 640);
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, r, r * 0.42, 0, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(77,159,255,0.14)'; ctx.lineWidth = 1; ctx.stroke();
+
+  // Sun
+  const sunR = 18 + orbit.mass / 28;
+  const sg = ctx.createRadialGradient(cx, cy, 0, cx, cy, sunR);
+  sg.addColorStop(0, '#fff8d0'); sg.addColorStop(0.4, '#ffcc44'); sg.addColorStop(1, '#ff6a00');
+  ctx.beginPath(); ctx.arc(cx, cy, sunR, 0, Math.PI*2);
+  ctx.fillStyle = sg; ctx.fill();
+  const glow = ctx.createRadialGradient(cx, cy, sunR, cx, cy, sunR * 2.8);
+  glow.addColorStop(0, 'rgba(255,140,0,0.22)'); glow.addColorStop(1, 'transparent');
+  ctx.beginPath(); ctx.arc(cx, cy, sunR * 2.8, 0, Math.PI*2);
+  ctx.fillStyle = glow; ctx.fill();
+
+  // Satellite trail
+  orbit.angle += orbit.speed * (orbit.mass / 100);
+  for (let t = 1; t <= 24; t++) {
+    const ta = orbit.angle - t * 0.045;
+    const tx = cx + r * Math.cos(ta);
+    const ty = cy + r * 0.42 * Math.sin(ta);
+    ctx.beginPath(); ctx.arc(tx, ty, 2.2 * (1 - t/24), 0, Math.PI*2);
+    ctx.fillStyle = `rgba(77,159,255,${(0.5*(1-t/24)).toFixed(2)})`; ctx.fill();
+  }
+
+  // Satellite
+  const sx = cx + r * Math.cos(orbit.angle);
+  const sy = cy + r * 0.42 * Math.sin(orbit.angle);
+  ctx.beginPath(); ctx.arc(sx, sy, 7, 0, Math.PI*2); ctx.fillStyle = '#4d9fff'; ctx.fill();
+  ctx.beginPath(); ctx.arc(sx, sy, 4, 0, Math.PI*2); ctx.fillStyle = '#c8e4ff'; ctx.fill();
+
+  // Velocity vector
+  const vx = -Math.sin(orbit.angle) * 22;
+  const vy = Math.cos(orbit.angle) * 9.5;
+  ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx+vx, sy+vy);
+  ctx.strokeStyle='#00e5a0'; ctx.lineWidth=1.5; ctx.stroke();
+
+  // Data
+  const v   = (7.8 * Math.sqrt(100 / orbit.r)).toFixed(2);
+  const alt = Math.round(408 * orbit.r / 100);
+  const per = (92.6 * Math.pow(orbit.r / 100, 1.5)).toFixed(1);
+  document.getElementById('v1').textContent = v + ' km/s';
+  document.getElementById('v2').textContent = alt + ' km';
+  document.getElementById('v3').textContent = per + ' min';
+}
+
+// ── BIOLOGY ──────────────────────────────────────────────
+let bioSpeed = 1.0;
+function drawBio() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#020810'; ctx.fillRect(0,0,W,H);
+  bioT += 0.018 * bioSpeed;
+
+  const cx = W / 2;
+  const pairs = 20;
+  const spacing = H / pairs;
+  const amp = 75 * (W / 640);
+
+  for (let i = 0; i < pairs; i++) {
+    const y = ((i * spacing - bioT * 28) % (H + spacing) + (H + spacing)) % (H + spacing) - spacing;
+    const wave1 = Math.sin((i / pairs) * Math.PI*2 + bioT) * amp;
+    const wave2 = -wave1;
+
+    if (i > 0) {
+      const piy = ((( i-1)*spacing - bioT*28) % (H+spacing) + (H+spacing)) % (H+spacing) - spacing;
+      const pw1  = Math.sin(((i-1)/pairs)*Math.PI*2 + bioT) * amp;
+      const pw2  = -pw1;
+      ctx.beginPath(); ctx.moveTo(cx+pw1,piy); ctx.lineTo(cx+wave1,y);
+      ctx.strokeStyle='rgba(0,229,160,0.7)'; ctx.lineWidth=2.5; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx+pw2,piy); ctx.lineTo(cx+wave2,y);
+      ctx.strokeStyle='rgba(0,180,120,0.6)'; ctx.lineWidth=2.5; ctx.stroke();
+    }
+
+    if (y > -12 && y < H+12) {
+      const bases = ['A-T','T-A','G-C','C-G'];
+      const base  = bases[i % 4];
+      const isGC  = base.includes('G');
+      ctx.beginPath(); ctx.moveTo(cx+wave1,y); ctx.lineTo(cx+wave2,y);
+      ctx.strokeStyle = isGC ? 'rgba(255,107,53,0.55)' : 'rgba(77,159,255,0.5)';
+      ctx.lineWidth = 1.5; ctx.stroke();
+
+      ctx.beginPath(); ctx.arc(cx+wave1,y,5,0,Math.PI*2); ctx.fillStyle='#00e5a0'; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx+wave2,y,5,0,Math.PI*2); ctx.fillStyle='#00c480'; ctx.fill();
+
+      if (i % 3 === 0) {
+        ctx.font='9px Space Grotesk'; ctx.fillStyle='rgba(0,229,160,0.5)';
+        ctx.fillText(base, cx + wave2 + 9, y + 3);
+      }
+    }
+  }
+
+  ctx.font='11px Space Grotesk';
+  ctx.fillStyle='rgba(0,229,160,0.6)'; ctx.fillText("5'→3'", cx + amp + 12, 18);
+  ctx.fillStyle='rgba(0,180,120,0.5)'; ctx.fillText("3'→5'", cx - amp - 38, 18);
+
+  document.getElementById('v1').textContent = '3.4 Å';
+  document.getElementById('v2').textContent = '34 Å';
+  document.getElementById('v3').textContent = '10 bp/turn';
+}
+
+// ── CHEMISTRY ────────────────────────────────────────────
+let chemVib = 0.6;
+const ATOMS = [
+  { label:'O', color:'#ff5050', r:18, x:0,    y:0   },
+  { label:'H', color:'#aadeff', r:10, x:-58,  y:-34 },
+  { label:'H', color:'#aadeff', r:10, x:58,   y:-34 },
+  { label:'C', color:'#888888', r:15, x:130,  y:38  },
+  { label:'O', color:'#ff5050', r:18, x:205,  y:38  },
+  { label:'H', color:'#aadeff', r:10, x:130,  y:95  },
+  { label:'N', color:'#4d9fff', r:16, x:-148, y:60  },
+  { label:'H', color:'#aadeff', r:10, x:-215, y:28  },
+  { label:'H', color:'#aadeff', r:10, x:-195, y:102 },
+];
+const BONDS = [[0,1],[0,2],[3,4],[3,5],[6,7],[6,8]];
+
+function drawChem() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#020810'; ctx.fillRect(0,0,W,H);
+  chemT += 0.014;
+
+  const cx = W/2, cy = H/2;
+  const scale = Math.min(W, H) / 580;
+
+  ATOMS.forEach((a,i) => {
+    a._x = cx + a.x*scale + Math.sin(chemT+i*0.8)*4*chemVib;
+    a._y = cy + a.y*scale + Math.cos(chemT*0.7+i*0.9)*3*chemVib;
+  });
+
+  // Bonds
+  ctx.lineWidth = 3;
+  BONDS.forEach(([ai,bi]) => {
+    ctx.beginPath(); ctx.moveTo(ATOMS[ai]._x,ATOMS[ai]._y); ctx.lineTo(ATOMS[bi]._x,ATOMS[bi]._y);
+    ctx.strokeStyle='rgba(255,255,255,0.28)'; ctx.stroke();
+  });
+
+  // Lone pairs on O
+  ctx.fillStyle='rgba(77,159,255,0.4)';
+  [[9,13],[-9,13]].forEach(([dx,dy]) => {
+    ctx.beginPath(); ctx.arc(ATOMS[0]._x+dx*scale,ATOMS[0]._y+dy*scale,2.5,0,Math.PI*2); ctx.fill();
+  });
+
+  // Atoms
+  ATOMS.forEach(a => {
+    const g = ctx.createRadialGradient(a._x-2.5,a._y-2.5,1,a._x,a._y,a.r*scale+2);
+    g.addColorStop(0,a.color+'ff'); g.addColorStop(1,a.color+'44');
+    ctx.beginPath(); ctx.arc(a._x,a._y,a.r*scale+2,0,Math.PI*2);
+    ctx.fillStyle=g; ctx.fill();
+    ctx.strokeStyle=a.color+'33'; ctx.lineWidth=1; ctx.stroke();
+
+    ctx.fillStyle='#ffffff'; ctx.font=`bold ${Math.round((a.r*scale+2)*1.1)}px Space Grotesk`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(a.label,a._x,a._y+1);
+  });
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+
+  document.getElementById('v1').textContent = '104.5°';
+  document.getElementById('v2').textContent = 'Bent';
+  document.getElementById('v3').textContent = 'Polar';
+}
+
+// ── EARTH SCIENCE ─────────────────────────────────────────
+let earthSpeed = 1.0;
+function drawEarth() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#020810'; ctx.fillRect(0,0,W,H);
+  earthT += 0.005 * earthSpeed;
+
+  // Grid
+  for (let x=0; x<W; x+=44) {
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H);
+    ctx.strokeStyle='rgba(90,70,190,0.055)'; ctx.lineWidth=1; ctx.stroke();
+  }
+  for (let y=0; y<H; y+=44) {
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y);
+    ctx.strokeStyle='rgba(90,70,190,0.055)'; ctx.lineWidth=1; ctx.stroke();
+  }
+
+  // Mantle convection wisps
+  for (let i=0; i<6; i++) {
+    const bx = (i*160 + earthT*15) % (W+60) - 30;
+    ctx.beginPath();
+    for (let yy=H; yy>H*0.5; yy-=5) {
+      const t = (H-yy)/(H*0.5);
+      const xoff = Math.sin(t*Math.PI*3+earthT*(0.6+i*0.15))*18*t;
+      yy===H ? ctx.moveTo(bx+xoff,yy) : ctx.lineTo(bx+xoff,yy);
+    }
+    ctx.strokeStyle=`rgba(255,${90+i*25},0,0.09)`; ctx.lineWidth=2.5; ctx.stroke();
+  }
+
+  // Oceanic plate
+  const p1x = (earthT * 9) % (W * 0.3);
+  ctx.fillStyle='rgba(18,55,115,0.82)';
+  ctx.beginPath();
+  ctx.moveTo(p1x, H/2); ctx.lineTo(p1x+W*0.46, H/2);
+  ctx.lineTo(p1x+W*0.46, H/2-42); ctx.lineTo(p1x, H/2-30);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='rgba(77,159,255,0.38)'; ctx.lineWidth=1; ctx.stroke();
+
+  // Continental plate
+  const p2x = W*0.38 - earthT*5;
+  ctx.fillStyle='rgba(75,48,8,0.82)';
+  ctx.beginPath();
+  ctx.moveTo(p2x, H/2); ctx.lineTo(p2x+W*0.72, H/2);
+  ctx.lineTo(p2x+W*0.72, H/2-55); ctx.lineTo(p2x, H/2-36);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='rgba(184,122,255,0.38)'; ctx.lineWidth=1; ctx.stroke();
+
+  // Subduction zone
+  const subX = (p1x + W*0.46 + p2x) / 2;
+  ctx.beginPath(); ctx.moveTo(subX,H/2); ctx.lineTo(subX-65,H);
+  ctx.strokeStyle='rgba(255,107,53,0.65)'; ctx.lineWidth=3; ctx.stroke();
+
+  // Magma blobs
+  for (let i=0; i<10; i++) {
+    const mx = subX - 55 + i*6 + Math.sin(earthT*2.5+i)*6;
+    const my = H*0.78 + Math.sin(earthT*3+i*0.6)*12;
+    ctx.beginPath(); ctx.arc(mx,my,4.5,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,${70+i*18},0,0.72)`; ctx.fill();
+  }
+
+  // Volcano
+  const volX = p2x + 55;
+  ctx.beginPath(); ctx.moveTo(volX-44,H/2); ctx.lineTo(volX,H/2-65); ctx.lineTo(volX+44,H/2);
+  ctx.fillStyle='rgba(72,36,8,0.92)'; ctx.fill();
+  ctx.strokeStyle='rgba(184,122,255,0.45)'; ctx.lineWidth=1; ctx.stroke();
+
+  // Eruption particles
+  for (let i=0; i<7; i++) {
+    const ey = H/2 - 65 - Math.abs(Math.sin(earthT*2.2+i))*46;
+    const ex = volX + (i-3)*9 + Math.sin(earthT+i*0.7)*7;
+    ctx.beginPath(); ctx.arc(ex,ey,3.5,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,${70+i*22},0,${0.55+Math.sin(earthT+i)*0.4})`; ctx.fill();
+  }
+
+  // Labels
+  ctx.font='10px Space Grotesk';
+  ctx.fillStyle='rgba(77,159,255,0.7)'; ctx.fillText('Oceanic Plate',p1x+16,H/2-12);
+  ctx.fillStyle='rgba(184,122,255,0.7)'; ctx.fillText('Continental Plate',p2x+90,H/2-20);
+  ctx.fillStyle='rgba(255,107,53,0.7)'; ctx.fillText('Subduction Zone',subX-58,H-16);
+
+  document.getElementById('v1').textContent = (earthT*1.8).toFixed(1)+' cm/yr';
+  document.getElementById('v2').textContent = '700 km';
+  document.getElementById('v3').textContent = 'Convergent';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER LOOP
+// ═══════════════════════════════════════════════════════════
+function tick() {
+  if (!playing) return;
+  if (currentSim==='phys')  drawPhys();
+  if (currentSim==='bio')   drawBio();
+  if (currentSim==='chem')  drawChem();
+  if (currentSim==='earth') drawEarth();
+  animId = requestAnimationFrame(tick);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SLIDER DEFINITIONS PER SIM
+// ═══════════════════════════════════════════════════════════
+const SLIDERS = {
+  phys: [
+    { label:'Orbital Radius', cls:'phys', min:50, max:150, val:100,
+      onChange: v => { orbit.r = v; document.getElementById('sl1v').textContent=(v/100).toFixed(2)+'×'; } },
+    { label:'Planet Mass',    cls:'phys', min:20, max:200, val:100,
+      onChange: v => { orbit.mass = v; document.getElementById('sl2v').textContent=(v/100).toFixed(2)+' M⊕'; } },
+  ],
+  bio: [
+    { label:'Rotation Speed', cls:'bio', min:20, max:300, val:100,
+      onChange: v => { bioSpeed=v/100; document.getElementById('sl1v').textContent=(v/100).toFixed(1)+'×'; } },
+    { label:'Zoom',           cls:'bio', min:50, max:200, val:100,
+      onChange: v => { document.getElementById('sl2v').textContent=(v/100).toFixed(1)+'×'; } },
+  ],
+  chem: [
+    { label:'Bond Vibration',    cls:'chem', min:0, max:200, val:60,
+      onChange: v => { chemVib=v/100; document.getElementById('sl1v').textContent=(v/100).toFixed(1)+'×'; } },
+    { label:'Electronegativity', cls:'chem', min:0, max:200, val:100,
+      onChange: v => { document.getElementById('sl2v').textContent=(v/100).toFixed(1)+''; } },
+  ],
+  earth: [
+    { label:'Plate Speed', cls:'earth', min:20, max:300, val:100,
+      onChange: v => { earthSpeed=v/100; document.getElementById('sl1v').textContent=(v/100).toFixed(1)+'×'; } },
+    { label:'Mantle Heat', cls:'earth', min:20, max:200, val:120,
+      onChange: v => { document.getElementById('sl2v').textContent=Math.round(v*14)+'°C'; } },
+  ],
+};
+
+function buildSliders(sub) {
+  const defs = SLIDERS[sub];
+  document.getElementById('sliderArea').innerHTML = defs.map((s,i)=>`
+    <div class="slider-row">
+      <div class="slider-label">
+        <span>${s.label}</span>
+        <strong id="sl${i+1}v">${s.val/100}×</strong>
+      </div>
+      <input type="range" id="sl${i+1}" class="${s.cls}" min="${s.min}" max="${s.max}" value="${s.val}"
+        oninput="window.sl${i+1}(+this.value)">
+    </div>
+  `).join('');
+  defs.forEach((s,i)=>{ window[`sl${i+1}`]=s.onChange; });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SWITCH SIMULATION
+// ═══════════════════════════════════════════════════════════
+function switchSim(sub) {
+  cancelAnimationFrame(animId);
+  currentSim = sub;
+  playing = true;
+  document.getElementById('playBtn').textContent = '⏸ Pause';
+  document.getElementById('playBtn').classList.remove('paused');
+
+  // Tabs
+  document.querySelectorAll('.stab').forEach(t => { t.className='stab'; });
+  document.getElementById('tab-'+sub).classList.add('active-'+sub);
+
+  // Header
+  const cfg = SIM_CONFIG[sub];
+  const badge = document.getElementById('simBadge');
+  badge.textContent = cfg.badge;
+  badge.style.background = cfg.badgeBg;
+  badge.style.color = cfg.badgeCol;
+  document.getElementById('simName').textContent = cfg.name;
+  document.getElementById('lbl1').textContent = cfg.lbls[0]+': ';
+  document.getElementById('lbl2').textContent = cfg.lbls[1]+': ';
+  document.getElementById('lbl3').textContent = cfg.lbls[2]+': ';
+
+  buildSliders(sub);
+  populateLessons(sub);
+
+  // Reset state
+  orbit  = { angle:0, speed:0.012, r:100, mass:100 };
+  bioT   = 0; chemT=0; earthT=0;
+  bioSpeed=1; chemVib=0.6; earthSpeed=1;
+
+  tick();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CONTROLS
+// ═══════════════════════════════════════════════════════════
+function togglePlay() {
+  playing = !playing;
+  const btn = document.getElementById('playBtn');
+  if (playing) { btn.textContent='⏸ Pause'; btn.classList.remove('paused'); tick(); }
+  else         { btn.textContent='▶ Play';  btn.classList.add('paused'); cancelAnimationFrame(animId); }
+}
+
+function resetSim() {
+  orbit = { angle:0, speed:0.012, r:100, mass:100 };
+  bioT=0; chemT=0; earthT=0;
+  bioSpeed=1; chemVib=0.6; earthSpeed=1;
+  buildSliders(currentSim);
+}
+
+function toggleFullscreen() {
+  const el = document.getElementById('canvasWrap');
+  if (!document.fullscreenElement) el.requestFullscreen().catch(()=>{});
+  else document.exitFullscreen();
+}
+
+function setNav(btn) {
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  QUIZ
+// ═══════════════════════════════════════════════════════════
+function openQuiz() {
+  const q = QUIZZES[currentSim];
+  document.getElementById('quizSubject').textContent = q.subject;
+  document.getElementById('quizQ').textContent = q.q;
+  document.getElementById('quizResult').textContent = '';
+  const opts = document.getElementById('quizOpts');
+  opts.innerHTML = '';
+  q.opts.forEach((o,i) => {
+    const btn = document.createElement('button');
+    btn.className='quiz-opt'; btn.textContent=o;
+    btn.onclick=()=>{
+      document.querySelectorAll('.quiz-opt').forEach((b,j) => {
+        b.disabled=true;
+        if (j===q.ans) b.classList.add('correct');
+        else if (j===i && i!==q.ans) b.classList.add('wrong');
+      });
+      document.getElementById('quizResult').textContent = i===q.ans ? '✓ '+q.explain : '✗ Incorrect. '+q.explain;
+      document.getElementById('quizResult').style.color = i===q.ans ? '#00e5a0' : '#ff6b35';
+      if (i===q.ans) {
+        vibrate(40);
+        const modId = MODULES.find(m => m.cls === currentSim)?.id;
+        awardXP(25, modId);
+      } else {
+        vibrate([30,40,30]);
+      }
+    };
+    opts.appendChild(btn);
+  });
+  document.getElementById('quizModal').classList.add('show');
+}
+
+function closeQuiz() { document.getElementById('quizModal').classList.remove('show'); }
+
+document.getElementById('quizModal').addEventListener('click', e => {
+  if (e.target===document.getElementById('quizModal')) closeQuiz();
+});
+
+// ═══════════════════════════════════════════════════════════
+//  HERO PARTICLE CANVAS
+// ═══════════════════════════════════════════════════════════
+const heroCanvas = document.getElementById('heroCanvas');
+const hctx       = heroCanvas.getContext('2d');
+let particles    = [];
+
+function initHero() {
+  heroCanvas.width  = heroCanvas.parentElement.offsetWidth;
+  heroCanvas.height = heroCanvas.parentElement.offsetHeight;
+  particles = Array.from({length:70},(_,i) => ({
+    x:  Math.random()*heroCanvas.width,
+    y:  Math.random()*heroCanvas.height,
+    r:  Math.random()*1.5+0.4,
+    vx: (Math.random()-0.5)*0.28,
+    vy: (Math.random()-0.5)*0.28,
+    col:['#00e5a0','#4d9fff','#ff6b35','#b87aff'][i%4],
+    a:  Math.random()*0.5+0.15
+  }));
+}
+
+function animHero() {
+  hctx.clearRect(0,0,heroCanvas.width,heroCanvas.height);
+  particles.forEach(p => {
+    p.x+=p.vx; p.y+=p.vy;
+    if(p.x<0||p.x>heroCanvas.width)  p.vx*=-1;
+    if(p.y<0||p.y>heroCanvas.height) p.vy*=-1;
+    hctx.beginPath(); hctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    hctx.fillStyle=p.col+(Math.floor(p.a*255).toString(16).padStart(2,'0'));
+    hctx.fill();
+  });
+  for(let i=0;i<particles.length;i++) {
+    for(let j=i+1;j<particles.length;j++) {
+      const d=Math.hypot(particles[i].x-particles[j].x,particles[i].y-particles[j].y);
+      if(d<85){
+        hctx.beginPath(); hctx.moveTo(particles[i].x,particles[i].y);
+        hctx.lineTo(particles[j].x,particles[j].y);
+        hctx.strokeStyle=`rgba(77,159,255,${(0.07*(1-d/85)).toFixed(3)})`;
+        hctx.lineWidth=0.5; hctx.stroke();
+      }
+    }
+  }
+  requestAnimationFrame(animHero);
+}
+
+initHero();
+animHero();
+window.addEventListener('resize', initHero);
+
+// ═══════════════════════════════════════════════════════════
+//  PWA: SERVICE WORKER + INSTALL PROMPT
+// ═══════════════════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  document.getElementById('installBtn').style.display = 'inline-flex';
+});
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  document.getElementById('installBtn').style.display = 'none';
+});
+async function installApp() {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  document.getElementById('installBtn').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PERSISTENT PROGRESS (saved on-device, survives closing the app)
+// ═══════════════════════════════════════════════════════════
+const PROGRESS_KEY = 'simlab-progress-v1';
+let progressState = { xp: 2840, level: 7, moduleProgress: {} };
+
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(PROGRESS_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      progressState = Object.assign(progressState, saved);
+      MODULES.forEach(m => {
+        if (progressState.moduleProgress[m.id] !== undefined) {
+          m.progress = progressState.moduleProgress[m.id];
+        }
+      });
+    } else {
+      MODULES.forEach(m => { progressState.moduleProgress[m.id] = m.progress; });
+    }
+  } catch (e) { /* ignore corrupted storage */ }
+  renderProgressUI();
+}
+
+function saveProgress() {
+  try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(progressState)); } catch (e) {}
+}
+
+function renderProgressUI() {
+  document.getElementById('xpBadge').textContent = '⚡ ' + progressState.xp.toLocaleString() + ' XP';
+  document.getElementById('levelBadge').textContent = 'Level ' + progressState.level + ' Scholar';
+  document.querySelectorAll('.module-card').forEach((card, i) => {
+    const m = MODULES[i];
+    const fill = card.querySelector('.progress-fill');
+    if (fill) fill.style.width = m.progress + '%';
+  });
+}
+
+function awardXP(amount, moduleId) {
+  progressState.xp += amount;
+  progressState.level = 1 + Math.floor(progressState.xp / 500);
+  if (moduleId) {
+    const m = MODULES.find(x => x.id === moduleId);
+    if (m) {
+      m.progress = Math.min(100, (progressState.moduleProgress[moduleId] || m.progress) + 15);
+      progressState.moduleProgress[moduleId] = m.progress;
+    }
+  }
+  saveProgress();
+  renderProgressUI();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MOBILE TOUCH: swipe between subjects, haptic quiz feedback
+// ═══════════════════════════════════════════════════════════
+const SUBJECT_ORDER = ['phys', 'bio', 'chem', 'earth'];
+(function enableSwipeNav() {
+  const zone = document.getElementById('canvasWrap');
+  let startX = 0, startY = 0;
+  zone.addEventListener('touchstart', (e) => {
+    startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+  }, { passive: true });
+  zone.addEventListener('touchend', (e) => {
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      const idx = SUBJECT_ORDER.indexOf(currentSim);
+      const next = dx < 0 ? (idx + 1) % SUBJECT_ORDER.length
+                           : (idx - 1 + SUBJECT_ORDER.length) % SUBJECT_ORDER.length;
+      switchSim(SUBJECT_ORDER[next]);
+    }
+  }, { passive: true });
+})();
+
+function vibrate(pattern) {
+  if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════════
+switchSim('phys');
+loadProgress();
+</script>
+</body>
+</html>
